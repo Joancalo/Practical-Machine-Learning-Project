@@ -1,0 +1,110 @@
+---
+title: 'Peer-graded Assignment: Prediction Assignment'
+author: "Jose A Carrasco"
+date: "October 16, 2017"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Peer-graded Assignment: Prediction Assignment
+# Summary
+The final goal of this project is to predict the manner in which 20 people (test cases) did exercise (barbell lifts). The "classe" variable in the training set describes 5 ways to perform the exercise properly or incorrectly. I will create a report describing how I built a model to predict the correct way of performing the exercise, how I used cross validation and what I think about the expected out of sample error. 
+
+# Loading the datasets and taking a look
+The training data for this project are available here:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+After downloading the data to the WD, I will read it as csv. 
+```{r data}
+library(caret)
+library(randomForest)
+setwd("C:/Users/JoseA/Documents/Coursera/JHU/Machine Learning/Project")
+pml_testing <- read.csv("pml-testing.csv")
+pml_training <- read.csv("pml-training.csv")
+```
+Now it is time to take a look at the data.
+
+```{r taking a look, echo=TRUE, message=TRUE}
+# Dimensions of the dataset.
+dim(pml_training)
+dim(pml_testing)
+# Levels of the class attribute.
+levels(pml_training$classe)
+# Breakdown of the instances in each class.
+summary(pml_training$classe) 
+```
+With summary(pml_training) and str(pml_training) we can take a better look, but it is not worthy to print it. So we see a lot of variables with "NA" that should be removed.I will also remove the non numeric variables 
+
+```{r cleaning the data, message=TRUE, include=FALSE}
+testingfinal <- pml_testing[,-(12:36)]
+testingfinal <- testingfinal[,-(25:34)]
+testingfinal <- testingfinal[,-(34:48)]
+testingfinal <- testingfinal[,-(37:51)]
+testingfinal <- testingfinal[,-(38:47)]
+testingfinal <- testingfinal[,-(50:64)]
+testingfinal <- testingfinal[,-(51:60)]
+testingfinal <- testingfinal[,(8:60)]
+
+trainingfinal <- pml_training[,-(12:36)]
+trainingfinal <- trainingfinal[,-(25:34)]
+trainingfinal <- trainingfinal[,-(34:48)]
+trainingfinal <- trainingfinal[,-(37:51)]
+trainingfinal <- trainingfinal[,-(38:47)]
+trainingfinal <- trainingfinal[,-(50:64)]
+trainingfinal <- trainingfinal[,-(51:60)]
+trainingfinal <- trainingfinal[,(8:60)]
+```
+# Creating a validation dataset
+I need to know if the model I'm about to create is good. So I'm going to use some data that the algorithm will not use to get an independent idea of how accurate the model might actually be.
+I will split the loaded dataset into two, 60% of which we will use to train our models and 40% that we will hold back as a validation dataset.
+```{r validation}
+# Making the validation set 
+set.seed(151017)
+inTrain <- createDataPartition(trainingfinal$classe, p=0.6, list=FALSE)
+trainingpart <- trainingfinal[inTrain,]
+testingpart <- trainingfinal[-inTrain,]
+# Taking a look to the data
+dim(trainingpart)
+dim(testingpart)
+```
+# Evaluating the Algorithm
+Now I will create a model of the data and estimate its accuracy on unseen data. I will Set-up a cross validation and build a RF model to predict the classe variable. The crossvalidation will split the dataset into 10 parts, train in 9 and test on 1. I will also repeat the process 3 times.
+
+```{r Evaluating, echo=TRUE}
+# Control
+control <- trainControl(method = "cv", number = 10)
+# Building the RF model
+set.seed(151017)
+fit.rf <- train(classe~., method = "rf", trControl = control, data=trainingpart)
+fit.rf$finalModel
+# summarize accuracy of models
+prediction <- predict(fit.rf, testingpart)
+confusionMatrix(prediction, testingpart$classe)
+print(fit.rf)
+```
+
+# Predicting the test cases
+Now that I have the model and its accuracy I can use it to predict the 20 test cases.
+```{r Predicting}
+predictionTC <- predict(fit.rf, testingfinal)
+predictionTC
+
+```
+# Out of sample error
+To calculate the out of sample error we need to now the total amount of observations and the total amount of correct predictions (accuracy). We can see that the out of sample error is low.
+```{r out of sample error}
+length(prediction)
+outOfSampleError.accuracy <- sum(prediction == testingpart$classe)/length(prediction)
+outOfSampleError.accuracy
+# out of sample error and percentage of out of sample error
+outOfSampleError <- 1 - outOfSampleError.accuracy
+outOfSampleError
+```

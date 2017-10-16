@@ -26,7 +26,7 @@ After downloading the data to the WD, I will read it as csv.
 ```{r data}
 library(caret)
 library(randomForest)
-setwd("C:/Users/JoseA/Documents/Coursera/JHU/Machine Learning/Project")
+
 pml_testing <- read.csv("pml-testing.csv")
 pml_training <- read.csv("pml-training.csv")
 ```
